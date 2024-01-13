@@ -4,6 +4,7 @@ import { Auth } from "./db/auth";
 import { User } from "./db/user";
 import * as crypto from "crypto";
 import * as jwt from "jsonwebtoken";
+import { json } from "sequelize";
 
 const SECRET = "asd123";
 const app = express();
@@ -11,7 +12,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 function getSHA256ofString(text: String) {
-  return crypto.createHash("sha256").digest("hex");
+  return crypto.createHash("sha256").update(JSON.stringify(text)).digest("hex");
 }
 
 app.listen(port, () => {
@@ -40,6 +41,7 @@ app.post("/auth", async (req, res) => {
   console.log({ user, auth });
   res.json(user);
 });
+
 app.post("/auth/token", async (req, res) => {
   const { email } = req.body;
   const passwordHasheada = getSHA256ofString(req.body.password);
@@ -52,11 +54,11 @@ app.post("/auth/token", async (req, res) => {
     },
   });
 
-  const token = jwt.sign({ id: auth.get("userID") }, SECRET);
-  console.log(auth);
-  if (auth) {
-    res.json(auth);
-  } else {
+  try {
+    const token = jwt.sign({ id: auth.get("userID") }, SECRET);
+    res.json(token);
+  } catch (error) {
+    console.error(error);
     res.status(400).json({ error: "email o password incorrecto" });
   }
 });
